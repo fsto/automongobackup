@@ -56,6 +56,18 @@ MAILCONTENT="stdout"
 # Set the maximum allowed email size in k. (4000 = approx 5MB email [see docs])
 MAXATTSIZE="4000"
 
+# Location of aws-send-email.pl
+#SESSENDMAIL=/opt/third-party/amazon/ses/ses-send-email.pl
+
+# Directory where SES.pm exists
+#SESDIR=/opt/third-party/amazon/ses/
+
+# Path to AWS credentials file.
+#AWSCREDENTIALSFILE=/opt/third-party/amazon/ses/aws-credentials
+
+# Email address to send mail from? (user@domain.com)
+#FROMMAILADDR=XXX
+
 # Email Address to send mail to? (user@domain.com)
 #MAILADDR=XXX
 
@@ -392,11 +404,16 @@ exec 1>&7 7>&-      # Restore stdout and close file descriptor #7.
 
 if [ "$MAILCONTENT" = "log" ]
 then
-	cat "$LOGFILE" | mail -s "Mongo Backup Log for $HOST - $DATE" $MAILADDR
-	if [ -s "$LOGERR" ]
+#	cat "$LOGFILE" | mail -s "Mongo Backup Log for $HOST - $DATE" $MAILADDR
+	ORIGINALDIR=`pwd`
+	cd $SESDIR
+	cat "$CURRENTDIR/$LOGFILE" | $SESSENDMAIL -k $AWSCREDENTIALSFILE -s "Mongo Backup Log for $HOST - $DATE" -f $FROMMAILADDR $MAILADDR
+	if [ -s "$CURRENTDIR/$LOGERR" ]
 		then
-			cat "$LOGERR" | mail -s "ERRORS REPORTED: Mongo Backup error Log for $HOST - $DATE" $MAILADDR
+			cat "$CURRENTDIR/$LOGERR" | $SESSENDMAIL -k $AWSCREDENTIALSFILE -s "ERRORS REPORTED: Mongo Backup error Log for $HOST - $DATE" -f $FROMMAILADDR $MAILADDR
 	fi
+	cd $ORIGINALDIR
+	unset ORIGINALDIR
 else
 	if [ -s "$LOGERR" ]
 		then
